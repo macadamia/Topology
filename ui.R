@@ -19,6 +19,18 @@ shinyUI(
   titlePanel("Topology Visualiser"),
 
   absolutePanel(
+    top = 0, left = 0, right = 0,
+    draggable = TRUE,
+    wellPanel(
+      if(usePlotly){
+        plotlyOutput("topoPlotly", height = "800px", width = "100%")
+      } else {
+        plotOutput("topoPlot", height = "800px", width = "100%")
+      }
+    )
+  ),
+
+  absolutePanel(
     bottom = 20, width = 300, height=400,
     draggable = TRUE,
     wellPanel(
@@ -33,22 +45,16 @@ shinyUI(
     ),
     style = "opacity: 0.92"
   ),
-
   absolutePanel(
-    top = 0, left = 0, right = 0,
+    bottom=20, right= 20, width = 300,
     draggable = TRUE,
     wellPanel(
-      if(usePlotly){
-        plotlyOutput("topoPlotly")
-      } else {
-        plotOutput("topoPlot", height = "800px", width = "1200px")
-      }
-    )
-  ),
-  absolutePanel(
-    bottom=30, right= 20, width = 300, height=400,
-    draggable = TRUE,
-    plotOutput("legend")
+      HTML(markdownToHTML(fragment.only=TRUE, text=c(
+        "Move this if it gets in the way"
+      ))),
+      plotOutput("legend")
+    ),
+    style = "opacity: 0.92"
     )
   )
 )

@@ -41,7 +41,9 @@ shinyServer(function(input, output, session ) {
     csv <- read.table(plantFile,skip=2,sep=',',stringsAsFactors = F)
     header <- unlist(read.table(plantFile,skip=1,sep=',',nrows=1))
     names(csv) <- header
-    cbPalette <- c('#E69F00','#009E73','#D55E00', '#0072B2','#56B4E9', '#F0E442','#CC79A7','#999999')
+
+    Density <- csv$Density[1]
+    Train <- csv$Training[1]
 
     #every GU is a vertex
 
@@ -78,8 +80,6 @@ shinyServer(function(input, output, session ) {
       i<-i+1
     }
 
-    fColors <- colrs
-
     g <- make_empty_graph(n=nVerts) %>%
       set_vertex_attr('color',value = colrs) %>%
       set_vertex_attr('label',value = '')
@@ -90,16 +90,6 @@ shinyServer(function(input, output, session ) {
     for(i in 2:nVerts){
 
       gc <- csv$Growing_Cycle[v]
-      # if(is.na(gc)){
-      #   gcCol <- 'brown'
-      # } else {
-      #   if(gc == 14) {
-      #     gcCol <- 'green'
-      #   }
-      #   if(gc == 15) {
-      #     gcCol <- 'blue'
-      #   }
-      # }
 
       gu <- guCode[i,]
       nThings <- length(which(!is.na(gu)))
@@ -142,7 +132,7 @@ shinyServer(function(input, output, session ) {
       prevThings <- nThings
     }
 
-    plot(g,vertex.shape=shapes,vertex.size=sizes,vertex.label.cex=0.8,layout=layout_as_tree(g,flip.y=F),main=plantFile)
+    plot(g,vertex.shape=shapes,vertex.size=sizes,vertex.label.cex=0.8,layout=layout_as_tree(g,flip.y=F),main=paste(plantFile,Density,Train,sep='\n'))
 
     X <- -2
     symbols(x=X, y=1, circle=11/200, add=TRUE, inches=FALSE,bg='grey')
@@ -175,8 +165,9 @@ shinyServer(function(input, output, session ) {
     var <- input$Variety
     tn<- input$treeNum
 
-    var <- 'Calypso'
-    tn <- 1
+    # var <- 'Calypso'
+    # tn <- 1
+
 
     #plantFile <- paste(var,tn,'GC_15_Detail.csv',sep='_')
     plantFile <- paste('Master_2016_Tree_',tn,'.csv',sep='')
@@ -184,7 +175,9 @@ shinyServer(function(input, output, session ) {
     csv <- read.table(plantFile,skip=2,sep=',',stringsAsFactors = F)
     header <- unlist(read.table(plantFile,skip=1,sep=',',nrows=1))
     names(csv) <- header
-    cbPalette <- c('#E69F00','#009E73','#D55E00', '#0072B2','#56B4E9', '#F0E442','#CC79A7','#999999')
+
+    Density <- csv$Density[1]
+    Train <- csv$Training[1]
 
     #every GU is a vertex
 
@@ -214,8 +207,6 @@ shinyServer(function(input, output, session ) {
       colrs[csv$Growing_Cycle == j] <- cbPalette[i]
       i<-i+1
     }
-
-    fColors <- colrs
 
     g <- make_empty_graph(n=nVerts) %>%
       set_vertex_attr('color',value = colrs) %>%
@@ -284,15 +275,16 @@ shinyServer(function(input, output, session ) {
 
     colGC <- rep('Z',nVerts)
     for(gc in csv$Growing_Cycle){
-    colGC[csv$Growing_Cycle == 14] <- 'A'
-    colGC[csv$Growing_Cycle == 15] <- 'A'
-    colGC[csv$Growing_Cycle == 16] <- 'A'
-    colGC[csv$Growing_Cycle == 17] <- 'A'
+      if(!is.na(gc)){
+        colGC[csv$Growing_Cycle == gc] <- LETTERS[gc - min(csv$Growing_Cycle,na.rm=T) + 1]
+      }
+    }
 
-    network <- plot_ly(x = Xn, y = Yn, mode = "markers", text = csv$Growing_Cycle, hoverinfo = "text", symbol = pruneTypes,
-                       symbols = c('square','cross','triangle-right','triangle-down','circle'),
-                      color = colGC, colors=cbPalette,
-                       type='scatter', showlegend = F)
+
+    network <- plot_ly(x = Xn, y = Yn, mode = "markers", text = paste("Row:",csv$Row_Number), hoverinfo = "text", symbol = pruneTypes,
+      symbols = c('square','cross','triangle-right','triangle-down','circle'), colors=cbPalette,
+      marker=list(size=10,col=colrs),
+      type='scatter', showlegend = F)
 
     edge_shapes <- list()
     for(i in 1:Ne) {
@@ -313,7 +305,7 @@ shinyServer(function(input, output, session ) {
 
     p <- layout(
       network,
-      title = paste(var,tn),
+      title = paste(var,tn,Density,Train),
       shapes = edge_shapes,
       xaxis = axis,
       yaxis = axis
@@ -330,6 +322,19 @@ shinyServer(function(input, output, session ) {
     cbN <- 1
     ypos <- 10
     xpos <- .3
+
+    var <- input$Variety
+    tn<- input$treeNum
+
+    # var <- 'Calypso'
+    # tn <- 1
+    plantFile <- paste('Master_2016_Tree_',tn,'.csv',sep='')
+
+    csv <- read.table(plantFile,skip=2,sep=',',stringsAsFactors = F)
+    header <- unlist(read.table(plantFile,skip=1,sep=',',nrows=1))
+    names(csv) <- header
+    gCycles <- sort(unique(csv$Growing_Cycle))
+
     for(uGC in gCycles){
       symbols(x=X, y=ypos, circle=circRad, add=TRUE, inches=FALSE,bg=cbPalette[cbN])
       text(xpos,ypos,paste('GU: GC',uGC),pos=4)
@@ -348,7 +353,7 @@ shinyServer(function(input, output, session ) {
     text(xpos,ypos,'Tip Prune',pos=4)
 
     ypos <- ypos - 1
-    points(x=X, y=ypos, pch=-9660)
+    points(x=X, y=ypos, pch=-9632)
     text(xpos,ypos,'Basal Prune',pos=4)
 
     ypos <- ypos - 1

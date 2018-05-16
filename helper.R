@@ -1,3 +1,4 @@
+cbPalette <- c('#E69F00','#009E73','#D55E00', '#0072B2','#56B4E9', '#F0E442','#CC79A7','#999999')
 
 # triangle vertex shape
 mytriangle <- function(coords, v=NULL, params) {
