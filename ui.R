@@ -8,10 +8,15 @@
 library(shiny)
 library(markdown)
 
+usePlotly <- T
+if(usePlotly){
+  library(plotly)
+}
+
 shinyUI(
   fluidPage(
   # Application title
-  titlePanel("Topology Visualiser\nGrowth Cycle 15"),
+  titlePanel("Topology Visualiser"),
 
   absolutePanel(
     bottom = 20, width = 300, height=400,
@@ -31,12 +36,19 @@ shinyUI(
 
   absolutePanel(
     top = 0, left = 0, right = 0,
-    fixed = TRUE
-
+    draggable = TRUE,
+    wellPanel(
+      if(usePlotly){
+        plotlyOutput("topoPlotly")
+      } else {
+        plotOutput("topoPlot", height = "800px", width = "1200px")
+      }
+    )
   ),
-
-  plotOutput("topoPlot", height = "800px")
-
-
+  absolutePanel(
+    bottom=30, right= 20, width = 300, height=400,
+    draggable = TRUE,
+    plotOutput("legend")
+    )
   )
 )

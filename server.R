@@ -30,7 +30,13 @@ shinyServer(function(input, output, session ) {
 
     var <- input$Variety
     tn<- input$treeNum
-    plantFile <- paste(var,tn,'GC_15_Detail.csv',sep='_')
+
+    # var <- 'Calypso'
+    # tn <- 1
+
+    #plantFile <- paste(var,tn,'GC_15_Detail.csv',sep='_')
+    plantFile <- paste('Master_2016_Tree_',tn,'.csv',sep='')
+
     print(plantFile)
     csv <- read.table(plantFile,skip=2,sep=',',stringsAsFactors = F)
     header <- unlist(read.table(plantFile,skip=1,sep=',',nrows=1))
@@ -39,7 +45,7 @@ shinyServer(function(input, output, session ) {
 
     #every GU is a vertex
 
-    nVerts = dim(csv)[1]
+    nVerts = nrow(csv)
 
 
     gu <- strsplit(csv$Gu_Code,'.',fixed=T)
@@ -59,11 +65,12 @@ shinyServer(function(input, output, session ) {
     shapes[pruneTypes == 'B'] <- 'diamond'
     shapes[pruneTypes == 'C'] <- 'triangle'
 
-    sizes <- rep(9,nVerts)
+    sizes <- rep(7,nVerts)
     #sizes[pruneTypes == 'B'] <- 11
 
 
     colrs <- rep(cbPalette[8],nVerts)
+    colrs[1] <- 'black'
     gCycles <- sort(unique(csv$Growing_Cycle))
     i<-1
     for( j in gCycles){
@@ -83,16 +90,16 @@ shinyServer(function(input, output, session ) {
     for(i in 2:nVerts){
 
       gc <- csv$Growing_Cycle[v]
-      if(is.na(gc)){
-        gcCol <- 'brown'
-      } else {
-        if(gc == 14) {
-          gcCol <- 'green'
-        }
-        if(gc == 15) {
-          gcCol <- 'blue'
-        }
-      }
+      # if(is.na(gc)){
+      #   gcCol <- 'brown'
+      # } else {
+      #   if(gc == 14) {
+      #     gcCol <- 'green'
+      #   }
+      #   if(gc == 15) {
+      #     gcCol <- 'blue'
+      #   }
+      # }
 
       gu <- guCode[i,]
       nThings <- length(which(!is.na(gu)))
@@ -135,28 +142,218 @@ shinyServer(function(input, output, session ) {
       prevThings <- nThings
     }
 
-    tree = layout_as_tree(g,root=1,flip.y=F)
-
-
-    plot(g,vertex.shape=shapes,vertex.size=sizes,vertex.label.cex=0.8,layout=tree,main=plantFile)
+    plot(g,vertex.shape=shapes,vertex.size=sizes,vertex.label.cex=0.8,layout=layout_as_tree(g,flip.y=F),main=plantFile)
 
     X <- -2
     symbols(x=X, y=1, circle=11/200, add=TRUE, inches=FALSE,bg='grey')
-    symbols(x=X, y=0.75, circle=11/200, add=TRUE, inches=FALSE,bg=cbPalette[1])
-    symbols(x=X, y=0.5, circle=11/200, add=TRUE, inches=FALSE,bg=cbPalette[2])
-    symbols(x=X, y=0.25, squares = 22/200, add=TRUE, inches=FALSE)
-    symbols(x=X, y=0, stars=cbind(11/200,11/200,11/200,11/200), add=TRUE, inches=FALSE)
-    symbols(x=X, y= -0.25, stars=cbind(11/200,11/200,11/200), add=TRUE, inches=FALSE)
+    cbN <- 1
+    ypos <- 0.75
+    xpos <- -1.95
+    for(uGC in gCycles){
+      symbols(x=X, y=ypos, circle=11/200, add=TRUE, inches=FALSE,bg=cbPalette[cbN])
+      text(xpos,ypos,paste('GU: GC',uGC),pos=4)
+      cbN <- cbN + 1
+      ypos <- ypos - 0.25
+    }
 
-    X <- -1.95
-    text(X,1,'GU: GC ?',pos=4)
-    text(X,0.75,'GU: GC 14',pos=4)
-    text(X,0.5,'GU: GC 15',pos=4)
-    text(X,0.25,'GU Tip Prune',pos=4)
-    text(X,0,'GU: Basal Prune',pos=4)
-    text(X,-0.25,'GU: Complete Prune',pos=4)
+    text(xpos,1,'GU: GC ?',pos=4)
+    ypos <- ypos - 0.25
+    symbols(x=X, y=ypos, squares = 22/200, add=TRUE, inches=FALSE)
+    text(xpos,ypos,'GU Tip Prune',pos=4)
+    ypos <- ypos - 0.25
+    symbols(x=X, y=ypos, stars=cbind(11/200,11/200,11/200,11/200), add=TRUE, inches=FALSE)
+    text(xpos,ypos,'GU: Basal Prune',pos=4)
+    ypos <- ypos - 0.25
+    symbols(x=X, y= ypos, stars=cbind(11/200,11/200,11/200), add=TRUE, inches=FALSE)
+    text(xpos,ypos,'GU: Complete Prune',pos=4)
 
 
+  })
+
+  output$topoPlotly <- renderPlotly({
+
+    var <- input$Variety
+    tn<- input$treeNum
+
+    var <- 'Calypso'
+    tn <- 1
+
+    #plantFile <- paste(var,tn,'GC_15_Detail.csv',sep='_')
+    plantFile <- paste('Master_2016_Tree_',tn,'.csv',sep='')
+
+    csv <- read.table(plantFile,skip=2,sep=',',stringsAsFactors = F)
+    header <- unlist(read.table(plantFile,skip=1,sep=',',nrows=1))
+    names(csv) <- header
+    cbPalette <- c('#E69F00','#009E73','#D55E00', '#0072B2','#56B4E9', '#F0E442','#CC79A7','#999999')
+
+    #every GU is a vertex
+
+    nVerts = nrow(csv)
+
+
+    gu <- strsplit(csv$Gu_Code,'.',fixed=T)
+
+    depth <- (max(nchar(csv$Gu_Code)) + 1 ) / 2  # accounts for . between numbers
+
+    guCode <- matrix(NA,nrow=nVerts,ncol=depth)
+    for(v in 1:nVerts){
+      gtmp <- gu[[v]]
+      guCode[v,1:length(gtmp)] <-  as.numeric(gtmp)
+    }
+
+    pruneTypes <- csv$Type_Pruned
+    pruneTypes[pruneTypes == ''] <- 'U'
+
+    sizes <- rep(7,nVerts)
+
+    colrs <- rep(cbPalette[8],nVerts)
+    colrs[1] <- 'black'
+    gCycles <- sort(unique(csv$Growing_Cycle))
+    i<-1
+    for( j in gCycles){
+      colrs[csv$Growing_Cycle == j] <- cbPalette[i]
+      i<-i+1
+    }
+
+    fColors <- colrs
+
+    g <- make_empty_graph(n=nVerts) %>%
+      set_vertex_attr('color',value = colrs) %>%
+      set_vertex_attr('label',value = '')
+    s <- 1
+    prevThings <- 1
+    for(i in 2:nVerts){
+      gc <- csv$Growing_Cycle[v]
+      gu <- guCode[i,]
+      nThings <- length(which(!is.na(gu)))
+      if(any(is.na(gu))){
+        e <- head(which(is.na(gu)),1) -1
+      } else {
+        e <- depth
+      }
+
+      #what if we have come to the end of the branch
+      if(nThings < prevThings){
+        #need to step back, but to where?
+        #the place will be one less than the last NA in this column
+        for(j in seq(i,1,-1)){ #need to look backwards to find the previous point
+          things <- length(which(!is.na(guCode[j,])))
+          if(things == (nThings -1)){
+            #found the insertion point
+            #cat(j,'-->',i,'\n')
+            s<-j
+            break
+          }
+        }
+      }
+
+      if(gu[e] != 0){
+        #a branch
+        #where from ? i - 1, but the first instance of that
+        possI <- guCode[i,(e-1)] # now we look for the first possI in column e-1
+        #search back along this Column
+        s <- i - (tail(which(guCode[i:s,(e-1)] == possI),1) - 1)
+        g <- g + edge(c(s,i),color='blue')
+        #cat('Branch',s,' ->',i,'\n')
+      } else {
+        #extend
+        s<-i-1
+        g <- g + edge(c(s,i),color='black')
+        #cat('Extend',s,' ->',i,'\n')
+        s<-i
+      }
+      prevThings <- nThings
+    }
+
+
+
+    G <- g
+    axis <- list(title = "", showgrid = F, showticklabels = FALSE, zeroline = F)
+
+    L <- layout_as_tree(G,flip.y=F)
+
+    vs <- V(G)
+    es <- as.data.frame(get.edgelist(G))
+
+    Nv <- length(vs)
+    Ne <- length(es[1]$V1)
+
+
+    Xn <- L[,1]
+    Yn <- L[,2]
+
+    colGC <- rep('Z',nVerts)
+    for(gc in csv$Growing_Cycle){
+    colGC[csv$Growing_Cycle == 14] <- 'A'
+    colGC[csv$Growing_Cycle == 15] <- 'A'
+    colGC[csv$Growing_Cycle == 16] <- 'A'
+    colGC[csv$Growing_Cycle == 17] <- 'A'
+
+    network <- plot_ly(x = Xn, y = Yn, mode = "markers", text = csv$Growing_Cycle, hoverinfo = "text", symbol = pruneTypes,
+                       symbols = c('square','cross','triangle-right','triangle-down','circle'),
+                      color = colGC, colors=cbPalette,
+                       type='scatter', showlegend = F)
+
+    edge_shapes <- list()
+    for(i in 1:Ne) {
+      v0 <- es[i,]$V1
+      v1 <- es[i,]$V2
+
+      edge_shape = list(
+        type = "line",
+        line = list(color = colrs[i], width = 0.5),
+        x0 = Xn[v0],
+        y0 = Yn[v0],
+        x1 = Xn[v1],
+        y1 = Yn[v1]
+      )
+
+      edge_shapes[[i]] <- edge_shape
+    }
+
+    p <- layout(
+      network,
+      title = paste(var,tn),
+      shapes = edge_shapes,
+      xaxis = axis,
+      yaxis = axis
+
+    )
+
+  })
+
+  output$legend <- renderPlot({
+    plot(c(0,10),c(0,10),type='n',axes=F,xlab=NA,ylab=NA)
+    X <- 0
+    circRad <- 0.3
+
+    cbN <- 1
+    ypos <- 10
+    xpos <- .3
+    for(uGC in gCycles){
+      symbols(x=X, y=ypos, circle=circRad, add=TRUE, inches=FALSE,bg=cbPalette[cbN])
+      text(xpos,ypos,paste('GU: GC',uGC),pos=4)
+      cbN <- cbN + 1
+      ypos <- ypos - 1
+    }
+    symbols(x=X, y=ypos, circle=circRad, add=TRUE, inches=FALSE,bg='grey')
+    text(xpos,ypos,'GU: GC ?',pos=4)
+
+    ypos <- ypos - 1.5
+    points(x=X, y=ypos, pch=-9658) # see http://www.alanwood.net/demos/wgl4.html
+    text(xpos,ypos,'Mid-Prune',pos=4)
+
+    ypos <- ypos - 1
+    points(x=X, y=ypos, pch=-9660)
+    text(xpos,ypos,'Tip Prune',pos=4)
+
+    ypos <- ypos - 1
+    points(x=X, y=ypos, pch=-9660)
+    text(xpos,ypos,'Basal Prune',pos=4)
+
+    ypos <- ypos - 1
+    points(x=X, y=ypos, pch='+',cex=2)
+    text(xpos,ypos,'Complete Prune',pos=4)
   })
 
 })
